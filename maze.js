@@ -131,19 +131,19 @@ class Cell {
 
     const neighbors = [];
 
-    // Nord
+    
     if (!this.walls.top && this.y > 0) {
         neighbors.push(grid[this.x][this.y - 1]);
     }
-    // Syd
+    
     if (!this.walls.bottom && this.y < grid[0].length - 1) {
         neighbors.push(grid[this.x][this.y + 1]);
     }
-    // Vest
+    
     if (!this.walls.left && this.x > 0) {
         neighbors.push(grid[this.x - 1][this.y]);
     }
-    // Øst
+    
     if (!this.walls.right && this.x < grid.length - 1) {
         neighbors.push(grid[this.x + 1][this.y]);
     }
@@ -164,13 +164,17 @@ class Cell {
   }
 
   // Hjælpefunktion til MazeSolver: Fremhæver cellen som en del af stien
-  drawPath(ctx, cellWidth, color = "#ff0000") {
+  drawPath(ctx, cellWidth, index = 0, pathLength = 1) {
     // TODO: Personliggør denne funktion.
-    ctx.fillStyle = color;
-    const px = this.x * cellWidth + cellWidth * 0.25;
-    const py = this.y * cellWidth + cellWidth * 0.25;
-    const size = cellWidth * 0.5;
-    ctx.fillRect(px, py, size, size);
+    const hue = (index / pathLength) * 360;
+    ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+
+    const px = this.x * cellWidth + cellWidth / 2;
+    const py = this.y * cellWidth + cellWidth / 2;
+    const size = cellWidth * 0.25;
+    ctx.beginPath();
+    ctx.arc(px, py, size, 0, Math.PI * 2);
+    ctx.fill();
   }
 }
 
@@ -257,6 +261,26 @@ class MazeSolver {
 
     // TODO: Lav `findPath()` vha. enten DFS (stak) eller BFS (queue)
 
+    const queue = [startCell];
+    startCell.visited = true;
+
+    while (queue.length > 0) {
+      const currentCell = queue.shift();
+
+      if (currentCell.equals(endCell)) {
+        return this.reconstructPath(startCell, endCell);
+      }
+
+      const neighbors = currentCell.connectedNeighbors(this.maze.grid);
+      neighbors.forEach((neighbor) => {
+        if (!neighbor.visited) {
+          neighbor.visited = true;
+          neighbor.parent = currentCell;
+          queue.push(neighbor);
+        }
+      });
+
+    }
     return null;
   }
 
@@ -280,12 +304,12 @@ class MazeSolver {
     }
   }
 
-  async drawPathStepwise(path, color = "#ff0000", delay = 100) {
+  async drawPathStepwise(path, delay = 100) {
     if (!path) return;
 
-    for (const cell of path) {
-      cell.drawPath(this.maze.ctx, this.maze.cellWidth, color);
-      await this.sleep(delay);
+    for (let i = 0; i < path.length; i++) {
+        path[i].drawPath(this.maze.ctx, this.maze.cellWidth, i, path.length);
+        await this.sleep(delay);
     }
   }
 
@@ -309,8 +333,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const endX = maze.cols - 1;
   const endY = maze.rows - 1;
 
-  solver.findPath(startX, startY, endX, endY);
-  solver.drawPathStepwise(path, "#ff0000", 20);
+  const path = solver.findPath(startX, startY, endX, endY);
+  solver.drawPathStepwise(path, 100);
 
   console.log(maze);
+
+  console.log("path: ", path);
+  
 });
